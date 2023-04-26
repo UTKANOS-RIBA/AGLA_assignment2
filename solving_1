@@ -1,0 +1,205 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <iomanip>
+#ifdef WIN64
+#define GNUPLOT_NAME "C:\\gnuplot\\bin\\gnuplot -persist"
+#else
+#define GNUPLOT_NAME "gnuplot -persist"
+#endif
+
+using namespace std;
+
+vector<vector<double>> inverseMatrix(vector<vector<double>> matrix) {
+    int n = matrix.size();
+    vector<vector<double>> identity(n, vector<double>(n, 0));
+    vector<vector<double>> augmented(n, vector<double>(2 * n, 0));
+
+    // Check if the matrix is square
+    if (n != matrix[0].size()) {
+        cout << "Error: Matrix is not square" << endl;
+        return matrix;
+    }
+
+    // Create the identity matrix
+    for (int i = 0; i < n; i++) {
+        identity[i][i] = 1;
+    }
+
+    // Concatenate the input matrix and the identity matrix
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            augmented[i][j] = matrix[i][j];
+            augmented[i][j + n] = identity[i][j];
+        }
+    }
+
+    // Perform row operations to transform the input matrix into the identity matrix
+    for (int i = 0; i < n; i++) {
+        double pivot = augmented[i][i];
+        for (int j = 0; j < 2 * n; j++) {
+            augmented[i][j] /= pivot;
+        }
+        for (int j = 0; j < n; j++) {
+            if (i != j) {
+                double factor = augmented[j][i];
+                for (int k = 0; k < 2 * n; k++) {
+                    augmented[j][k] -= factor * augmented[i][k];
+                }
+            }
+        }
+    }
+
+    // Extract the inverse matrix from the augmented matrix
+    vector<vector<double>> inverse(n, vector<double>(n, 0));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            inverse[i][j] = augmented[i][j + n];
+        }
+    }
+
+    return inverse;
+}
+
+int main() {
+
+#ifdef WIN64
+    FILE* plotter = _popen(GNUPLOT_NAME, "w");
+#else
+    FILE* plotter = popen(GNUPLOT_NAME, "w");
+#endif
+
+    fprintf(plotter, "%s\n", "set border linewidth 1.5\n"
+                             "set style line 1 linecolor rgb '#0060ad' linetype 1 linewidth 2\n"
+                             "set style line 2 linecolor rgb '#dd181f' linetype 1 linewidth 2");
+
+    fprintf(plotter, "%s\n", "set key at -50,70\n"
+                             "set xlabel 'x'\n"
+                             "set ylabel 'y'\n"
+                             "set xrange [-100:100]\n"
+                             "set yrange [-75:75]\n"
+                             "set xtics 25\n"
+                             "set ytics 25\n"
+                             "set tics scale 0.75");
+
+    int m, n;
+    cin >> m;
+
+    // Read in the data set
+    vector<double> t(m), b(m);
+    for (int i = 0; i < m; i++) {
+        cin >> t[i] >> b[i];
+    }
+
+    cin >> n;
+
+    // Construct the matrix A
+    vector<vector<double>> A(m, vector<double>(n + 1, 0));
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j <= n; j++) {
+            A[i][j] = pow(t[i], j);
+        }
+    }
+
+    // Compute the transpose of A
+    vector<vector<double>> AT(n + 1, vector<double>(m, 0));
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j < m; j++) {
+            AT[i][j] = A[j][i];
+        }
+    }
+
+    // Compute the product AT*A
+    vector<vector<double>> ATA(n + 1, vector<double>(n + 1, 0));
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            for (int k = 0; k < m; k++) {
+                ATA[i][j] += AT[i][k] * A[k][j];
+            }
+        }
+    }
+
+    // Compute the inverse of ATA
+    vector<vector<double>> ATA_inv(n + 1, vector<double>(n + 1, 0));
+    ATA_inv = inverseMatrix(ATA);
+
+    // Compute the product AT*b
+    vector<double> ATb(n + 1, 0);
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j < m; j++) {
+            ATb[i] += AT[i][j] * b[j];
+        }
+    }
+
+    // Compute the solution x
+    vector<double> x(n + 1, 0);
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            x[i] += ATA_inv[i][j] * ATb[j];
+        }
+    }
+
+    // Print the results
+    cout << "A:" << endl;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j <= n; j++) {
+            cout << fixed << setprecision(4) << A[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "A_T*A:" << endl;
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            cout << fixed << setprecision(4) << ATA[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "(A_T*A)^-1:" << endl;
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            if (ATA_inv[i][j] == -0){
+                ATA_inv[i][j] = 0;
+            }
+            cout << fixed << setprecision(4) << ATA_inv[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "A_T*b:" << endl;
+    for (int i = 0; i <= n; i++) {
+        cout << fixed << setprecision(4) << ATb[i] << endl;
+    }
+
+    cout << "x~:" << endl;
+    for (int i = 0; i <= n; i++) {
+        cout << fixed << setprecision(4) << x[i] << endl;
+    }
+
+    fprintf(plotter, "%s", "f(x) = ");
+    fprintf(plotter, "%f", x[0]);
+    for (int i = 1; i < n + 1; i++) {
+        fprintf(plotter, "%s", " + ");
+        fprintf(plotter, "%f", x[i]);
+        fprintf(plotter, "%s", " * x**");
+        fprintf(plotter, "%d", i);
+    }
+    fprintf(plotter, "%s\n", "");
+
+    fprintf(plotter, "%s\n", "plot '-' title 'rawData' with lines linestyle 1, [x=-100:100] f(x) title 'fittedData' with "
+                             "lines linestyle 2");
+    for (int i = 0; i < m; i++) {
+        fprintf(plotter, "%f%f\n", t[i], b[i]);
+    }
+    fprintf(plotter, "%c\n", 'e');
+
+
+#ifdef WIN64
+    _pclose(plotter);
+#else
+    pclose(plotter);
+#endif
+
+    return 0;
+}
