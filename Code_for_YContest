@@ -1,0 +1,156 @@
+#include <iostream>
+#include <vector>
+#include <cmath>
+#include <iomanip>
+
+using namespace std;
+
+vector<vector<double>> inverseMatrix(vector<vector<double>> matrix) {
+    int n = matrix.size();
+    vector<vector<double>> identity(n, vector<double>(n, 0));
+    vector<vector<double>> augmented(n, vector<double>(2 * n, 0));
+
+    // Check if the matrix is square
+    if (n != matrix[0].size()) {
+        cout << "Error: Matrix is not square" << endl;
+        return matrix;
+    }
+
+    // Create the identity matrix
+    for (int i = 0; i < n; i++) {
+        identity[i][i] = 1;
+    }
+
+    // Concatenate the input matrix and the identity matrix
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            augmented[i][j] = matrix[i][j];
+            augmented[i][j + n] = identity[i][j];
+        }
+    }
+
+    // Perform row operations to transform the input matrix into the identity matrix
+    for (int i = 0; i < n; i++) {
+        double pivot = augmented[i][i];
+        for (int j = 0; j < 2 * n; j++) {
+            augmented[i][j] /= pivot;
+        }
+        for (int j = 0; j < n; j++) {
+            if (i != j) {
+                double factor = augmented[j][i];
+                for (int k = 0; k < 2 * n; k++) {
+                    augmented[j][k] -= factor * augmented[i][k];
+                }
+            }
+        }
+    }
+
+    // Extract the inverse matrix from the augmented matrix
+    vector<vector<double>> inverse(n, vector<double>(n, 0));
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            inverse[i][j] = augmented[i][j + n];
+        }
+    }
+
+    return inverse;
+}
+
+int main() {
+    int m, n;
+    cin >> m;
+
+    // Read in the data set
+    vector<double> t(m), b(m);
+    for (int i = 0; i < m; i++) {
+        cin >> t[i] >> b[i];
+    }
+
+    cin >> n;
+
+    // Construct the matrix A
+    vector<vector<double>> A(m, vector<double>(n + 1, 0));
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j <= n; j++) {
+            A[i][j] = pow(t[i], j);
+        }
+    }
+
+    // Compute the transpose of A
+    vector<vector<double>> AT(n + 1, vector<double>(m, 0));
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j < m; j++) {
+            AT[i][j] = A[j][i];
+        }
+    }
+
+    // Compute the product AT*A
+    vector<vector<double>> ATA(n + 1, vector<double>(n + 1, 0));
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            for (int k = 0; k < m; k++) {
+                ATA[i][j] += AT[i][k] * A[k][j];
+            }
+        }
+    }
+
+    // Compute the inverse of ATA
+    vector<vector<double>> ATA_inv(n + 1, vector<double>(n + 1, 0));
+    ATA_inv = inverseMatrix(ATA);
+
+    // Compute the product AT*b
+    vector<double> ATb(n + 1, 0);
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j < m; j++) {
+            ATb[i] += AT[i][j] * b[j];
+        }
+    }
+
+    // Compute the solution x
+    vector<double> x(n + 1, 0);
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            x[i] += ATA_inv[i][j] * ATb[j];
+        }
+    }
+
+    // Print the results
+    cout << "A:" << endl;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j <= n; j++) {
+            cout << fixed << setprecision(4) << A[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "A_T*A:" << endl;
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            cout << fixed << setprecision(4) << ATA[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "(A_T*A)^-1:" << endl;
+    for (int i = 0; i <= n; i++) {
+        for (int j = 0; j <= n; j++) {
+            if (ATA_inv[i][j] == -0){
+                ATA_inv[i][j] = 0;
+            }
+            cout << fixed << setprecision(4) << ATA_inv[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << "A_T*b:" << endl;
+    for (int i = 0; i <= n; i++) {
+        cout << fixed << setprecision(4) << ATb[i] << endl;
+    }
+
+    cout << "x~:" << endl;
+    for (int i = 0; i <= n; i++) {
+        cout << fixed << setprecision(4) << x[i] << endl;
+    }
+
+    return 0;
+}
